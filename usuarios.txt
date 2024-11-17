@@ -1,0 +1,3 @@
+sebas(este es el usuario):ceef825134d22576b496c17f8429406ab6b753124a2fa15a76cb76f7eea1209b ( esta es la contraseña)
+
+solo va a sha256, genera su contraseña y listo..
