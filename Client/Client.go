@@ -1,33 +1,58 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
+	"net"
 	"os"
-	"time"
+	"strings"
 )
 
 func main() {
-	// Verificar que los argumentos sean suficientes
-	if len(os.Args) < 4 {
-		fmt.Println("Faltan argumentos. Uso: clienteOperativos <IP> <Puerto> <PeriodoReporte>")
+	// Verificar argumentos
+	if len(os.Args) != 4 {
+		fmt.Println("Uso: go run Client.go <IP> <Puerto> <Periodo>")
 		return
 	}
 
-	// Obtener los argumentos
 	ip := os.Args[1]
 	puerto := os.Args[2]
-	periodoReporte := os.Args[3]
+	periodo := os.Args[3]
 
-	// Intentar convertir el periodo de reporte a tiempo de duración
-	duration, err := time.ParseDuration(periodoReporte)
+	// Conectar al servidor
+	conn, err := net.Dial("tcp", ip+":"+puerto)
 	if err != nil {
-		fmt.Println("Error al convertir el periodo de reporte:", err)
+		fmt.Println("Error conectando al servidor:", err)
 		return
 	}
+	defer conn.Close()
 
-	// Mostrar los valores obtenidos
-	fmt.Println("Conectando al servidor en IP:", ip, "y puerto:", puerto)
-	fmt.Println("Periodo de reporte:", duration)
+	fmt.Printf("Conectando al servidor en IP: %s y puerto: %s\n", ip, puerto)
+	fmt.Printf("Periodo de reporte: %s\n", periodo)
 
-	// Puedes agregar el código que use la duración aquí
+	// Leer respuesta del servidor
+	reader := bufio.NewReader(conn)
+	resp, _ := reader.ReadString('\n')
+	fmt.Print("Respuesta del servidor: " + resp)
+
+	// Solicitar las credenciales al usuario
+	fmt.Print("Ingrese su usuario: ")
+	username := leerEntrada()
+	fmt.Print("Ingrese su contraseña: ")
+	password := leerEntrada()
+
+	// Enviar las credenciales al servidor en formato "usuario:contraseña"
+	credenciales := fmt.Sprintf("%s:%s", username, password)
+	conn.Write([]byte(credenciales + "\n"))
+
+	// Leer la respuesta del servidor después de enviar las credenciales
+	resp, _ = reader.ReadString('\n')
+	fmt.Println("Respuesta del servidor: " + resp)
+}
+
+// Función auxiliar para leer entrada del usuario
+func leerEntrada() string {
+	reader := bufio.NewReader(os.Stdin)
+	entrada, _ := reader.ReadString('\n')
+	return strings.TrimSpace(entrada)
 }

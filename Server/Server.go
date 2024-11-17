@@ -70,9 +70,15 @@ func validarUsuario(username, password string) bool {
 	return hashedPassword == password
 }
 
+// Función auxiliar para leer la entrada del usuario
+func leerEntrada(reader *bufio.Reader) string {
+	entrada, _ := reader.ReadString('\n')
+	return strings.TrimSpace(entrada)
+}
+
 // Iniciar el servidor
 func iniciarServidor(config Config) {
-	listener, err := net.Listen("tcp", ":"+config.Puerto)
+	listener, err := net.Listen("tcp", config.IPPermitida+":"+config.Puerto)
 	if err != nil {
 		fmt.Println("Error iniciando servidor:", err)
 		return
@@ -90,13 +96,17 @@ func iniciarServidor(config Config) {
 	}
 }
 
-// Manejar conexión con un cliente
 func manejarConexion(conn net.Conn, config Config) {
 	defer conn.Close()
 
 	reader := bufio.NewReader(conn)
 	ipRemota := conn.RemoteAddr().String()
-	if !strings.HasPrefix(ipRemota, config.IPPermitida) {
+
+	// Extraer solo la IP de la cadena "IP:Puerto"
+	ip := strings.Split(ipRemota, ":")[0]
+
+	// Verificar si la IP está permitida
+	if ip != config.IPPermitida {
 		fmt.Println("Conexión rechazada de IP no permitida:", ipRemota)
 		conn.Write([]byte("IP no autorizada\n"))
 		return
@@ -129,16 +139,14 @@ func manejarConexion(conn net.Conn, config Config) {
 	}
 }
 
-// Autenticar cliente
 func autenticarCliente(conn net.Conn, reader *bufio.Reader) bool {
+	// Solicitar usuario y contraseña
 	conn.Write([]byte("Ingrese sus credenciales (usuario:password):\n"))
-	credenciales, err := reader.ReadString('\n')
-	if err != nil {
-		fmt.Println("Error leyendo credenciales:", err)
-		return false
-	}
 
-	credenciales = strings.TrimSpace(credenciales)
+	// Leer credenciales usando la función auxiliar
+	credenciales := leerEntrada(reader)
+
+	// Separar las credenciales en usuario y contraseña
 	parts := strings.Split(credenciales, ":")
 	if len(parts) != 2 {
 		conn.Write([]byte("Formato de credenciales inválido\n"))
@@ -146,7 +154,13 @@ func autenticarCliente(conn net.Conn, reader *bufio.Reader) bool {
 	}
 
 	username, password := parts[0], hashPassword(parts[1])
-	return validarUsuario(username, password)
+	if validarUsuario(username, password) {
+		conn.Write([]byte("Autenticación exitosa\n"))
+		return true
+	} else {
+		conn.Write([]byte("Autenticación fallida\n"))
+		return false
+	}
 }
 
 // Ejecutar comando en el sistema
