@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"os/exec"
 	"strings"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -15,9 +16,9 @@ import (
 
 // Config estructura para almacenar la configuración
 type Config struct {
-	IPPermitida       string
-	Puerto            string
-	IntentosFallidos  int
+	IPPermitida      string
+	Puerto           string
+	IntentosFallidos int
 }
 
 // Leer configuración desde el archivo .conf
@@ -157,7 +158,7 @@ func ejecutarComando(comando string) (string, error) {
 
 func main() {
 	// Leer configuración del archivo
-	config := leerConfiguracion("servidor.conf")
+	config := leerConfiguracion("./Server.conf")
 
 	// Iniciar el servidor
 	iniciarServidor(config)
