@@ -8,12 +8,27 @@ import (
 	"strings"
 )
 
-func main() {
-	fmt.Print("Ingrese IP: ")
-	ip := leerEntrada()
+const (
+	Reset  = "\033[0m"
+	Red    = "\033[31m"
+	Green  = "\033[32m"
+	Yellow = "\033[33m"
+	Blue   = "\033[34m"
+	Purple = "\033[35m"
+	Cyan   = "\033[36m"
+	White  = "\033[37m"
+)
 
-	fmt.Print("Ingrese puerto: ")
-	puerto := leerEntrada()
+func main() {
+	// Comprobar que se pasen los argumentos correctamente
+	if len(os.Args) < 3 {
+		fmt.Println("Uso: go run clientTCP.go <IP> <Puerto>")
+		return
+	}
+
+	// Leer la IP y el puerto de los argumentos
+	ip := os.Args[1]
+	puerto := os.Args[2]
 
 	serverIP := ip + ":" + puerto
 
@@ -40,9 +55,9 @@ func main() {
 
 	// Bucle principal para enviar comandos al servidor
 	for {
-		fmt.Print("\nIngrese el comando a enviar (o 'exit' para salir): ")
+		fmt.Print("\n%s$ %s", Green, Reset) // Muestra el prompt de la terminal
 		comando := leerEntrada()
-		fmt.Println("Procesando comando...")
+		imprimirComando(comando)
 
 		conn.Write([]byte(comando + "\n"))
 
@@ -70,6 +85,10 @@ func autenticar(conn net.Conn) bool {
 	return strings.TrimSpace(respuesta) == "OK"
 }
 
+func imprimirComando(comando string) {
+	fmt.Printf("%s$ %s%s\n", Green, comando, Reset)
+}
+
 func recibirRespuesta(conn net.Conn) {
 	reader := bufio.NewReader(conn)
 	fmt.Println("Esperando respuesta del servidor...")
@@ -83,14 +102,18 @@ func recibirRespuesta(conn net.Conn) {
 		linea = strings.TrimSpace(linea)
 
 		if strings.HasPrefix(linea, "Estado de la máquina:") {
-			fmt.Println("\n" + linea) // Mostrar el estado de la máquina
+			imprimirEstadoMaquina(linea) // Usar formato adecuado para el estado
 		} else if linea == "--FIN DE RESPUESTA--" {
 			fmt.Println("Comando exitoso. Respuesta completa recibida.")
 			break
 		} else {
-			fmt.Println("Servidor dice:", linea)
+			fmt.Printf("%s[SERVER]: %s%s\n", Yellow, linea, Reset) // Resalta la salida del servidor
 		}
 	}
+}
+
+func imprimirEstadoMaquina(estado string) {
+	fmt.Printf("%sEstado de la máquina:%s %s\n", Blue, Reset, estado)
 }
 
 func leerEntrada() string {
