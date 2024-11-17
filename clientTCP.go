@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -20,15 +21,15 @@ const (
 )
 
 func main() {
-	// Comprobar que se pasen los argumentos correctamente
-	if len(os.Args) < 3 {
-		fmt.Println("Uso: go run clientTCP.go <IP> <Puerto>")
+	// Verificar argumentos
+	if len(os.Args) < 4 {
+		fmt.Println("Uso: go run clientTCP.go <IP> <Puerto> <Intervalo>")
 		return
 	}
 
-	// Leer la IP y el puerto de los argumentos
 	ip := os.Args[1]
 	puerto := os.Args[2]
+	intervalo := os.Args[3] // Nuevo parámetro
 
 	serverIP := ip + ":" + puerto
 
@@ -53,11 +54,13 @@ func main() {
 		return
 	}
 
-	// Bucle principal para enviar comandos al servidor
+	// Enviar intervalo al servidor
+	conn.Write([]byte(intervalo + "\n"))
+
+	// Bucle principal para enviar comandos
 	for {
-		fmt.Print("\n%s$ %s", Green, Reset) // Muestra el prompt de la terminal
+		fmt.Printf("\n%s$ %s", Green, Reset) // Muestra el prompt de la terminal
 		comando := leerEntrada()
-		imprimirComando(comando)
 
 		conn.Write([]byte(comando + "\n"))
 
@@ -67,22 +70,43 @@ func main() {
 		}
 
 		recibirRespuesta(conn)
+
 	}
 }
 
 func autenticar(conn net.Conn) bool {
-	fmt.Print("Usuario: ")
-	usuario := leerEntrada()
-	fmt.Print("Contraseña: ")
-	contrasena := leerEntrada()
-
-	authData := usuario + ":" + contrasena
-	conn.Write([]byte(authData + "\n"))
-
-	// Leer respuesta de autenticación
+	// Leer el número de intentos permitidos desde el servidor
 	reader := bufio.NewReader(conn)
-	respuesta, _ := reader.ReadString('\n')
-	return strings.TrimSpace(respuesta) == "OK"
+	attemptsStr, _ := reader.ReadString('\n')
+	attemptsStr = strings.TrimSpace(strings.TrimPrefix(attemptsStr, "INTENTOS:"))
+	attempts, err := strconv.Atoi(attemptsStr)
+	if err != nil {
+		fmt.Println("Error leyendo el número de intentos:", err)
+		return false
+	}
+
+	// Intentar autenticarse con el número de intentos proporcionado
+	for intentos := 0; intentos < attempts; intentos++ {
+		fmt.Print("Usuario: ")
+		usuario := leerEntrada()
+		fmt.Print("Contraseña: ")
+		contrasena := leerEntrada()
+
+		authData := usuario + ":" + contrasena
+		conn.Write([]byte(authData + "\n"))
+
+		// Leer respuesta de autenticación
+		respuesta, _ := reader.ReadString('\n')
+
+		if strings.TrimSpace(respuesta) == "OK" {
+			fmt.Println("Autenticación exitosa.")
+			return true
+		}
+
+		fmt.Printf("Autenticación fallida. Intento %d/%d.\n", intentos+1, attempts)
+	}
+
+	return false
 }
 
 func imprimirComando(comando string) {
